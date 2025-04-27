@@ -120,7 +120,7 @@
         </div>
     </div>
     <script>
-        const API_URL = "https://aboutme-3lol.onrender.com"; // Replace with your Render URL after deployment
+        const API_URL = "https://aboutme-3lol.onrender.com";
         const chatOutput = document.getElementById('chat-output');
         const chatInput = document.getElementById('chat-input');
         const sendMessageButton = document.getElementById('send-message');
@@ -142,12 +142,18 @@
         }
 
         // Add message to chat UI
-        function addMessageToChat(role, content) {
+        function addMessageToChat(role, content, isHtml = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble';
-            bubble.textContent = content;
+
+            if (isHtml) {
+                bubble.innerHTML = content;
+            } else {
+                bubble.textContent = content;
+            }
+
             messageDiv.appendChild(bubble);
             chatOutput.appendChild(messageDiv);
             chatOutput.scrollTop = chatOutput.scrollHeight;
@@ -156,44 +162,58 @@
         // Display chat history
         function displayChatHistory() {
             chatOutput.innerHTML = '';
-            chatHistory.forEach(msg => addMessageToChat(msg.role, msg.content));
+            chatHistory.forEach(msg => addMessageToChat(msg.role, msg.content, msg.isHtml || false));
         }
 
         // Send message to backend
         async function sendMessage() {
             const message = chatInput.value.trim();
-            if (!message) return;
+            if (!message) {
+                console.warn('Empty message entered');
+                return;
+            }
 
             chatInput.value = '';
             sendMessageButton.disabled = true;
 
             try {
                 // Add user message
+                console.log('Sending user message:', message);
                 addMessageToChat('user', message);
-                chatHistory.push({ role: 'user', content: message });
+                chatHistory.push({ role: 'user', content: message, isHtml: false });
                 saveChatHistory();
 
                 // Send to backend
+                console.log('Fetching from:', `${API_URL}/chat`);
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message })
                 });
 
-                if (!response.ok) throw new Error('Server error');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Server error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+                }
 
                 const data = await response.json();
+                console.log('Received server response:', data);
                 const reply = data.reply;
+                const isHtml = data.isHtml || false;
 
                 // Add assistant response
-                addMessageToChat('assistant', reply);
-                chatHistory.push({ role: 'assistant', content: reply });
+                addMessageToChat('assistant', reply, isHtml);
+                chatHistory.push({ role: 'assistant', content: reply, isHtml });
                 saveChatHistory();
             } catch (error) {
-                console.error('Chat error:', error);
-                const errorMsg = 'Sorry, something went wrong. Try again?';
+                console.error('Chat error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    url: `${API_URL}/chat`
+                });
+                const errorMsg = `Sorry, something went wrong: ${error.message}. Try again?`;
                 addMessageToChat('assistant', errorMsg);
-                chatHistory.push({ role: 'assistant', content: errorMsg });
+                chatHistory.push({ role: 'assistant', content: errorMsg, isHtml: false });
                 saveChatHistory();
             } finally {
                 sendMessageButton.disabled = false;

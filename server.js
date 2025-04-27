@@ -14,7 +14,7 @@ app.use(express.json());
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-// Your personal information
+// Personal information
 const personalInfo = {
     name: 'Chance Krenzer',
     age: 18,
@@ -81,18 +81,30 @@ const personalInfo = {
     favoriteFood: ['pizza', 'Mexican food', 'Italian food']
 };
 
+// Retry logic for rate limits
+const retry = async (fn, retries = 3, delay = 1000) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i === retries - 1 || error.status !== 429) throw error;
+            console.log(`Rate limit hit, retrying (${i + 1}/${retries}) after ${delay * Math.pow(2, i)}ms`);
+            await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        }
+    }
+};
+
 // Prompt for Gemini
 function createPrompt(message) {
-    // Check for "easter egg" in the message (case-insensitive)
     if (message.toLowerCase().includes('easter egg')) {
         return {
-            isHtml: true,
+            isEasterEgg: true,
             content: 'Did you say egg?? Click this: <a href="aiegg.html" style="color: #1e90ff; text-decoration: underline;">Easter Egg</a>'
         };
     }
 
     return {
-        isHtml: false,
+        isEasterEgg: false,
         content: `
         I'm Chance Krenzer, and I'm here to answer your questions about myself in a friendly, concise way, like we're chatting as friends. Only share info that's relevant to the question, using the details below, and use "I" to refer to myself. Here's who I am:
 
@@ -108,7 +120,7 @@ function createPrompt(message) {
         - Music: ${personalInfo.music.trumpet}. ${personalInfo.music.piano}.
         - Education: I'm a ${personalInfo.education.current} and will study engineering at ${personalInfo.education.future}.
         - Interests: I love ${personalInfo.interests.join(', ')}.
-        - Dislikes: I don't enjoy ${personalInfo.dislikes.join(' or ')}.
+        - Dislikes: I don't enjoy ${personalInfo.dislike.join(' or ')}.
         - Pet: ${personalInfo.pet}
         - Family: ${personalInfo.family}
         - Birthday: ${personalInfo.birthday}
@@ -131,21 +143,39 @@ function createPrompt(message) {
 app.post('/chat', async (req, res) => {
     const { message } = req.body;
     if (!message) {
+        console.warn('Received empty message');
         return res.status(400).json({ error: 'Message is required' });
     }
 
     try {
         const prompt = createPrompt(message);
-        // If the response is the easter egg link, return it directly
-        if (prompt.isHtml) {
+        if (prompt.isEasterEgg) {
+            console.log('Easter egg triggered for message:', message);
             return res.json({ reply: prompt.content, isHtml: true });
         }
-        const result = await model.generateContent(prompt.content);
+
+        console.log('Sending request to Gemini API for message:', message);
+        const result = await retry(() => model.generateContent(prompt.content));
+        console.log('Received response from Gemini API');
         const reply = result.response.text();
         res.json({ reply, isHtml: false });
     } catch (error) {
-        console.error('Error generating response:', error);
-        res.status(500).json({ error: 'Failed to generate response' });
+        console.error('Error in /chat endpoint:', {
+            message: error.message,
+            stack: error.stack,
+            status: error.status || 'N/A',
+            code: error.code || 'N/A',
+            apiResponse: error.response ? JSON.stringify(error.response.data, null, 2) : 'No API response'
+        });
+        let clientError = 'Failed to generate response';
+        if (error.message.includes('API key')) {
+            clientError = 'Server configuration error: Invalid API key';
+        } else if (error.status === 429) {
+            clientError = 'Rate limit exceeded, please try again later';
+        } else if (error.message.includes('model')) {
+            clientError = 'Model not available';
+        }
+        res.status(500).json({ error: clientError });
     }
 });
 
