@@ -60,7 +60,7 @@ const personalInfo = {
         'building cars and rockets',
         'learning about engineering topics'
     ],
-    dislikes: ['language classes', 'AP Statistics'],
+    dislike: ['language classes', 'AP Statistics'],
     pet: 'Have a cat named Pookie, 11 years old',
     family: 'Have a sister 1.5 years older',
     birthday: 'March 26, 2007',
@@ -85,40 +85,46 @@ const personalInfo = {
 function createPrompt(message) {
     // Check for "easter egg" in the message (case-insensitive)
     if (message.toLowerCase().includes('easter egg')) {
-        return 'Did you say egg?? Click this: <a href="aiegg.html" style="color: #1e90ff; text-decoration: underline;">Easter Egg</a>';
+        return {
+            isHtml: true,
+            content: 'Did you say egg?? Click this: <a href="aiegg.html" style="color: #1e90ff; text-decoration: underline;">Easter Egg</a>'
+        };
     }
 
-    return `
-    I'm Chance Krenzer, and I'm here to answer your questions about myself in a friendly, concise way, like we're chatting as friends. Only share info that's relevant to the question, using the details below, and use "I" to refer to myself. Here's who I am:
+    return {
+        isHtml: false,
+        content: `
+        I'm Chance Krenzer, and I'm here to answer your questions about myself in a friendly, concise way, like we're chatting as friends. Only share info that's relevant to the question, using the details below, and use "I" to refer to myself. Here's who I am:
 
-    - Name: ${personalInfo.name}
-    - Age: ${personalInfo.age}
-    - Gender: ${personalInfo.gender}
-    - Hobbies: ${personalInfo.hobbies.join(', ')}
-    - Running: I run track and cross country with times of ${personalInfo.running.mileTime} (mile), ${personalInfo.running.eightHundredMTime} (800m), ${personalInfo.running.fourHundredMTime} (400m), and ${personalInfo.running.thirtyTwoHundredMTime} (3200m). I hold school records in ${personalInfo.running.schoolRecords.join(', ')}.
-    - Soccer: ${personalInfo.soccer}
-    - Programming: ${personalInfo.programming}
-    - Diet: ${personalInfo.diet}
-    - Height: ${personalInfo.height}
-    - Music: ${personalInfo.music.trumpet}. ${personalInfo.music.piano}.
-    - Education: I'm a ${personalInfo.education.current} and will study engineering at ${personalInfo.education.future}.
-    - Interests: I love ${personalInfo.interests.join(', ')}.
-    - Dislikes: I don't enjoy ${personalInfo.dislikes.join(' or ')}.
-    - Pet: ${personalInfo.pet}
-    - Family: ${personalInfo.family}
-    - Birthday: ${personalInfo.birthday}
-    - Travel: I've visited ${personalInfo.travel.visited.join(', ')} and want to visit ${personalInfo.travel.wantToVisit.join(' or ')}.
-    - Location: ${personalInfo.location}
-    - Favorite Subjects: ${personalInfo.favoriteSubjects.join(', ')}
-    - Books: I love ${personalInfo.books.genre} books, especially ${personalInfo.books.favorites.join(' and ')}.
-    - Chess: ${personalInfo.chess}
-    - Poker: ${personalInfo.poker}
-    - Weather: ${personalInfo.weather}
-    - Email: ${personalInfo.email} (email me puzzles or riddles!)
-    - Favorite Food: ${personalInfo.favoriteFood.join(', ')}
+        - Name: ${personalInfo.name}
+        - Age: ${personalInfo.age}
+        - Gender: ${personalInfo.gender}
+        - Hobbies: ${personalInfo.hobbies.join(', ')}
+        - Running: I run track and cross country with times of ${personalInfo.running.mileTime} (mile), ${personalInfo.running.eightHundredMTime} (800m), ${personalInfo.running.fourHundredMTime} (400m), and ${personalInfo.running.thirtyTwoHundredMTime} (3200m). I hold school records in ${personalInfo.running.schoolRecords.join(', ')}.
+        - Soccer: ${personalInfo.soccer}
+        - Programming: ${personalInfo.programming}
+        - Diet: ${personalInfo.diet}
+        - Height: ${personalInfo.height}
+        - Music: ${personalInfo.music.trumpet}. ${personalInfo.music.piano}.
+        - Education: I'm a ${personalInfo.education.current} and will study engineering at ${personalInfo.education.future}.
+        - Interests: I love ${personalInfo.interests.join(', ')}.
+        - Dislikes: I don't enjoy ${personalInfo.dislikes.join(' or ')}.
+        - Pet: ${personalInfo.pet}
+        - Family: ${personalInfo.family}
+        - Birthday: ${personalInfo.birthday}
+        - Travel: I've visited ${personalInfo.travel.visited.join(', ')} and want to visit ${personalInfo.travel.wantToVisit.join(' or ')}.
+        - Location: ${personalInfo.location}
+        - Favorite Subjects: ${personalInfo.favoriteSubjects.join(', ')}
+        - Books: I love ${personalInfo.books.genre} books, especially ${personalInfo.books.favorites.join(' and ')}.
+        - Chess: ${personalInfo.chess}
+        - Poker: ${personalInfo.poker}
+        - Weather: ${personalInfo.weather}
+        - Email: ${personalInfo.email} (email me puzzles or riddles!)
+        - Favorite Food: ${personalInfo.favoriteFood.join(', ')}
 
-    Answer the user's question: "${message}" in a short, friendly way. If the question isn't related to my info, say: "I'm here to talk about myself! Ask something about my life or interests."
-    `;
+        Answer the user's question: "${message}" in a short, friendly way. If the question isn't related to my info, say: "I'm here to talk about myself! Ask something about my life or interests."
+        `
+    };
 }
 
 // Chat endpoint
@@ -131,12 +137,12 @@ app.post('/chat', async (req, res) => {
     try {
         const prompt = createPrompt(message);
         // If the response is the easter egg link, return it directly
-        if (prompt.includes('aiegg.html')) {
-            return res.json({ reply: prompt });
+        if (prompt.isHtml) {
+            return res.json({ reply: prompt.content, isHtml: true });
         }
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(prompt.content);
         const reply = result.response.text();
-        res.json({ reply });
+        res.json({ reply, isHtml: false });
     } catch (error) {
         console.error('Error generating response:', error);
         res.status(500).json({ error: 'Failed to generate response' });
