@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Me - Chatbot</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid white;
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+        }
+        #chat-output {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .message.user {
+            text-align: right;
+            color: #00ff00;
+        }
+        .message.assistant {
+            text-align: left;
+            color: white;
+        }
+        .message-bubble {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        .message.user .message-bubble {
+            background: rgba(0, 255, 0, 0.2);
+        }
+        .message.assistant .message-bubble {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #chat-input-container {
+            display: flex;
+        }
+        #chat-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid white;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+        }
+        #send-message {
+            padding: 10px 15px;
+            margin-left: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        #send-message:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        #back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+        }
+        #back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <button id="back-button">Back to Home</button>
+    <div class="container">
+        <h1>About Me</h1>
+        <div id="chat-container">
+            <div id="chat-output"></div>
+            <div id="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Ask about me...">
+                <button id="send-message">Send</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const API_URL = "https://your-render-service.onrender.com"; // Replace with your Render URL after deployment
+        const chatOutput = document.getElementById('chat-output');
+        const chatInput = document.getElementById('chat-input');
+        const sendMessageButton = document.getElementById('send-message');
+        const backButton = document.getElementById('back-button');
+        let chatHistory = [];
+
+        // Load chat history from localStorage
+        function loadChatHistory() {
+            const savedHistory = localStorage.getItem('aboutMeChatHistory');
+            if (savedHistory) {
+                chatHistory = JSON.parse(savedHistory);
+                displayChatHistory();
+            }
+        }
+
+        // Save chat history to localStorage
+        function saveChatHistory() {
+            localStorage.setItem('aboutMeChatHistory', JSON.stringify(chatHistory));
+        }
+
+        // Add message to chat UI
+        function addMessageToChat(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = content;
+            messageDiv.appendChild(bubble);
+            chatOutput.appendChild(messageDiv);
+            chatOutput.scrollTop = chatOutput.scrollHeight;
+        }
+
+        // Display chat history
+        function displayChatHistory() {
+            chatOutput.innerHTML = '';
+            chatHistory.forEach(msg => addMessageToChat(msg.role, msg.content));
+        }
+
+        // Send message to backend
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            chatInput.value = '';
+            sendMessageButton.disabled = true;
+
+            try {
+                // Add user message
+                addMessageToChat('user', message);
+                chatHistory.push({ role: 'user', content: message });
+                saveChatHistory();
+
+                // Send to backend
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) throw new Error('Server error');
+
+                const data = await response.json();
+                const reply = data.reply;
+
+                // Add assistant response
+                addMessageToChat('assistant', reply);
+                chatHistory.push({ role: 'assistant', content: reply });
+                saveChatHistory();
+            } catch (error) {
+                console.error('Chat error:', error);
+                const errorMsg = 'Sorry, something went wrong. Try again?';
+                addMessageToChat('assistant', errorMsg);
+                chatHistory.push({ role: 'assistant', content: errorMsg });
+                saveChatHistory();
+            } finally {
+                sendMessageButton.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        // Event listeners
+        sendMessageButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        backButton.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadChatHistory();
+            chatInput.focus();
+        });
+    </script>
+</body>
+</html>
