@@ -3,14 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Easter Egg</title>
+    <title>AI Easter Egg</title>
     <style>
-        body { background: black; color: white; font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-        h1 { font-size: 36px; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #easter-egg {
+            width: 100px;
+            height: 100px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        #easter-egg:hover {
+            transform: scale(1.1);
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+        #back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+        }
+        #back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
-    <h1>You Found My Easter Egg!</h1>
-    <p>Congrats, you discovered a secret! Email me at chance.krenzer@gmail.com for a special riddle.</p>
+    <button id="back-button">Back to About Me</button>
+    <img id="easter-egg" src="../assets/easteregg.png" alt="Easter Egg">
+    <div id="message">You found my easter egg! Click it to collect it!</div>
+    <script>
+        const EASTER_EGG_ID = 'easterEggAI';
+        const easterEgg = document.getElementById('easter-egg');
+        const backButton = document.getElementById('back-button');
+        const message = document.getElementById('message');
+
+        // Check if easter egg is already collected
+        if (localStorage.getItem(EASTER_EGG_ID) === 'true') {
+            message.textContent = 'You already collected this easter egg!';
+            easterEgg.style.opacity = '0.5';
+            easterEgg.style.cursor = 'default';
+            easterEgg.style.pointerEvents = 'none';
+        }
+
+        // Handle easter egg click
+        easterEgg.addEventListener('click', () => {
+            if (localStorage.getItem(EASTER_EGG_ID) !== 'true') {
+                localStorage.setItem(EASTER_EGG_ID, 'true');
+                message.textContent = 'Easter egg collected! Heading back...';
+                setTimeout(() => {
+                    window.location.href = 'aboutme.html';
+                }, 1000); // Short delay for user to see message
+            }
+        });
+
+        // Handle back button click
+        backButton.addEventListener('click', () => {
+            window.location.href = 'aboutme.html';
+        });
+    </script>
 </body>
 </html>

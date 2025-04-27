@@ -85,9 +85,7 @@ const personalInfo = {
 function createPrompt(message) {
     // Check for "easter egg" in the message (case-insensitive)
     if (message.toLowerCase().includes('easter egg')) {
-        return `
-        Did you say egg?? Click this: <a href="aiegg.html">Easter Egg</a>
-        `;
+        return 'Did you say egg?? Click this: <a href="aieasteregg.html">Easter Egg</a>';
     }
 
     return `
@@ -132,6 +130,10 @@ app.post('/chat', async (req, res) => {
 
     try {
         const prompt = createPrompt(message);
+        // If the response is the easter egg link, return it directly
+        if (prompt.includes('aieasteregg.html')) {
+            return res.json({ reply: prompt });
+        }
         const result = await model.generateContent(prompt);
         const reply = result.response.text();
         res.json({ reply });
