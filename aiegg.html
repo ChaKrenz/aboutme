@@ -49,24 +49,25 @@
             background: rgba(255, 255, 255, 0.3);
             transform: scale(1.1);
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <button id="back-button">Back to About Me</button>
-    <img id="easter-egg" src="../assets/easteregg.png" alt="Easter Egg">
+    <img id="easter-egg" src="assets/easteregg.png" alt="Easter Egg">
     <div id="message">You found my easter egg! Click it to collect it!</div>
     <script>
         const EASTER_EGG_ID = 'easterEggAI';
         const easterEgg = document.getElementById('easter-egg');
-        const backButton = document.getElementById('back-button');
         const message = document.getElementById('message');
+        const backButton = document.getElementById('back-button');
 
         // Check if easter egg is already collected
         if (localStorage.getItem(EASTER_EGG_ID) === 'true') {
-            message.textContent = 'You already collected this easter egg!';
-            easterEgg.style.opacity = '0.5';
-            easterEgg.style.cursor = 'default';
-            easterEgg.style.pointerEvents = 'none';
+            easterEgg.classList.add('hidden');
+            message.classList.add('hidden');
         }
 
         // Handle easter egg click
